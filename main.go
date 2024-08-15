@@ -1,6 +1,7 @@
 package main
 
 import (
+	routes "github.com/ritankarsaha/Golang-JWT-Auth/routes"
 	"os"
 	"github.com/gin-gonic/gin"
 )
@@ -16,11 +17,10 @@ func main() {
 	router.Use(gin.Logger())
 	router.Use(gin.Recovery())
 
-	router.GET("/", func(c *gin.Context) {
-		c.JSON(200, gin.H{
-			"message": "Hello, world!",
-		})
-	})
+    routes.AuthRoutes(router)
+	routes.UserRoutes(router)
+
+	
 
 	if err := router.Run(":" + port); err != nil {
 		panic("Failed to start server: " + err.Error())
