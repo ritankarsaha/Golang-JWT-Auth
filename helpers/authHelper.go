@@ -2,7 +2,10 @@ package helpers
 
 import (
 	"errors"
+	"log"
+
 	"github.com/gin-gonic/gin"
+	"golang.org/x/crypto/bcrypt"
 )
 
 // CheckUserType checks the user type before any function is executed.
@@ -28,4 +31,13 @@ func MathUserTypeToUid(c *gin.Context, userId string) error {
 		return err
 	}
 	return nil
+}
+
+func HashPassword(password string) string {
+	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
+	if err != nil {
+		log.Println("Error hashing password:", err)
+		return ""
+	}
+	return string(bytes)
 }
