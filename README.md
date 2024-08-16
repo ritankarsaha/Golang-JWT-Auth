@@ -24,6 +24,34 @@ This project implements a JWT authentication system using Go and MongoDB. It fea
   - `github.com/golang-jwt/jwt`
   - `github.com/joho/godotenv`
 
+
+
+
+### Project Structure:- 
+
+```
+|--controllers
+| |--userController.go     # Contains handlers for user-related operations
+|--database
+| |--databaseConnection.go # Handles MongoDB connection 
+|--helpers
+| |--authHelper.go         # Contains helper functions for authentication
+| |--tokenHelper.go        # Contains helper functions for JWT token management
+|--middleware
+| |--authMiddleware.go     # Middleware for JWT authentication
+|--models
+| |--userModel.go          # Defines the user model and schema
+|--routes
+| |--authRouter.go         # Routes for authentication-related endpoints
+| |--userRouter.go         # Routes for user-related endpoints
+|--.env                    
+|--go.mod                  # Go module file
+|--go.sum                  # Go module checksum file
+|--main.go                 # Entry point for the application
+|--README.md               # Project documentation
+
+```
+
 ### Installation
 
 1. **Clone the Repository**
