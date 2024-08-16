@@ -3,88 +3,97 @@ package helpers
 import (
 	"context"
 	"log"
+	"os"
 	"time"
+
 	"github.com/ritankarsaha/Golang-JWT-Auth/database"
 	jwt "github.com/golang-jwt/jwt"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"github.com/joho/godotenv"
 )
 
 type SignedDetails struct {
 	Email       string
-	First_Name   string
-	Last_Name    string
+	FirstName   string
+	LastName    string
 	Uid         string
 	UserType    string
 	jwt.StandardClaims
 }
 
-var userCollection *mongo.Collection = database.OpenCollection(database.Client,"user")
-var secretKey = []byte("secretkey")
+var userCollection *mongo.Collection = database.OpenCollection(database.Client, "user")
+var secretKey []byte
 
-func GenerateAllTokens(email string, firstname string, lastname string, uid string, userType string ) (signedToken string, signedRefreshToken string, err error){
+func init() {
+	err := godotenv.Load(".env")
+	if err != nil {
+		log.Fatalf("Error loading .env file: %v", err)
+	}
+	secretKey = []byte(os.Getenv("SECRET_KEY"))
+}
 
+func GenerateAllTokens(email, firstname, lastname, uid, userType string) (signedToken, signedRefreshToken string, err error) {
 	claims := &SignedDetails{
-		Email : email,
-		First_Name: firstname,
-		Last_Name: lastname,
-		Uid: uid,
-		UserType: userType,
+		Email:     email,
+		FirstName: firstname,
+		LastName:  lastname,
+		Uid:       uid,
+		UserType:  userType,
 		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: time.Now().Local().Add(time.Hour * time.Duration(24)).Unix(),
+			ExpiresAt: time.Now().Local().Add(time.Hour * 24).Unix(),
 		},
-
 	}
 
 	refreshClaims := &SignedDetails{
 		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: time.Now().Local().Add(time.Hour * time.Duration(168)).Unix(),
+			ExpiresAt: time.Now().Local().Add(time.Hour * 168).Unix(),
 		},
 	}
 
-	token, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(SECRET_KEY))
-	refreshToken, err := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshClaims).SignedString([]byte(SECRET_KEY))
-
-	if err!=nil{
-		log.Panic(err)
-		return 
+	token, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString(secretKey)
+	if err != nil {
+		log.Println("Error signing token:", err)
+		return
 	}
 
-	return token, refreshToken, err
-	
+	refreshToken, err := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshClaims).SignedString(secretKey)
+	if err != nil {
+		log.Println("Error signing refresh token:", err)
+		return
+	}
+
+	return token, refreshToken, nil
 }
 
-
-func UpdateAllTokens(signedToken string, signedRefreshToken string, userId string){
-
-	ctx , cancel := context.WithTimeout(context.Background(),100*time.Second)
+func UpdateAllTokens(signedToken, signedRefreshToken, userId string) {
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
 	defer cancel()
+
 	updateObj := bson.D{
 		{Key: "token", Value: signedToken},
-		{Key: "refresh_token",Value: signedRefreshToken},
-		{Key: "updated_at",Value: time.Now().Format(time.RFC3339)},
+		{Key: "refresh_token", Value: signedRefreshToken},
+		{Key: "updated_at", Value: time.Now().Format(time.RFC3339)},
 	}
 
-	filter := bson.M{"user_id":userId}
+	filter := bson.M{"user_id": userId}
 	upsert := true
 	opt := options.UpdateOptions{
 		Upsert: &upsert,
 	}
 
-	result,  err := userCollection.UpdateOne(
+	result, err := userCollection.UpdateOne(
 		ctx,
 		filter,
 		bson.D{{Key: "$set", Value: updateObj}},
 		&opt,
 	)
 
-	if err != nil{
-		log.Panicf("Failed to update tokens for the user %s: %v",userId,err)
-		return 
+	if err != nil {
+		log.Printf("Failed to update tokens for user %s: %v", userId, err)
+		return
 	}
 
-	log.Printf("Updated tokens for the user are:-  %s: %v",userId,result)
-
-
+	log.Printf("Updated tokens for user %s: %v", userId, result)
 }
