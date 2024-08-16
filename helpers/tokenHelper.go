@@ -2,16 +2,17 @@ package helpers
 
 import (
 	"context"
+	"errors"
 	"log"
 	"os"
 	"time"
 
-	"github.com/ritankarsaha/Golang-JWT-Auth/database"
-	jwt "github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt"
+	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"github.com/joho/godotenv"
+	"github.com/ritankarsaha/Golang-JWT-Auth/database"
 )
 
 type SignedDetails struct {
@@ -55,16 +56,33 @@ func GenerateAllTokens(email, firstname, lastname, uid, userType string) (signed
 	token, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString(secretKey)
 	if err != nil {
 		log.Println("Error signing token:", err)
-		return
+		return "", "", err
 	}
 
 	refreshToken, err := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshClaims).SignedString(secretKey)
 	if err != nil {
 		log.Println("Error signing refresh token:", err)
-		return
+		return "", "", err
 	}
 
 	return token, refreshToken, nil
+}
+
+// ValidateToken validates a JWT token and returns claims or an error
+func ValidateToken(tokenString string) (*SignedDetails, error) {
+	// Parse the token
+	token, err := jwt.ParseWithClaims(tokenString, &SignedDetails{}, func(token *jwt.Token) (interface{}, error) {
+		return secretKey, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if claims, ok := token.Claims.(*SignedDetails); ok && token.Valid {
+		return claims, nil
+	}
+
+	return nil, errors.New("invalid token")
 }
 
 func UpdateAllTokens(signedToken, signedRefreshToken, userId string) {
