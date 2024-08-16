@@ -55,3 +55,36 @@ func GenerateAllTokens(email string, firstname string, lastname string, uid stri
 	
 }
 
+
+func UpdateAllTokens(signedToken string, signedRefreshToken string, userId string){
+
+	ctx , cancel := context.WithTimeout(context.Background(),100*time.Second)
+	defer cancel()
+	updateObj := bson.D{
+		{Key: "token", Value: signedToken},
+		{Key: "refresh_token",Value: signedRefreshToken},
+		{Key: "updated_at",Value: time.Now().Format(time.RFC3339)},
+	}
+
+	filter := bson.M{"user_id":userId}
+	upsert := true
+	opt := options.UpdateOptions{
+		Upsert: &upsert,
+	}
+
+	result,  err := userCollection.UpdateOne(
+		ctx,
+		filter,
+		bson.D{{Key: "$set", Value: updateObj}},
+		&opt,
+	)
+
+	if err != nil{
+		log.Panicf("Failed to update tokens for the user %s: %v",userId,err)
+		return 
+	}
+
+	log.Printf("Updated tokens for the user are:-  %s: %v",userId,result)
+
+
+}
